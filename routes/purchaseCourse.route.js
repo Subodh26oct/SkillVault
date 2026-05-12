@@ -14,7 +14,7 @@ router
   .post(isAuthenticated, initiateStripeCheckout);
 router
   .route("/webhook")
-  .post(express.raw({ type: "application/json" }), handleStripeWebhook);
+  .post(handleStripeWebhook);
 router
   .route("/course/:courseId/detail-with-status")
   .get(isAuthenticated, getCoursePurchaseStatus);

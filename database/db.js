@@ -40,8 +40,6 @@ class DatabaseConnection {
             }
 
             const connectionOptions = {
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
                 maxPoolSize: 10,
                 serverSelectionTimeoutMS: 5000,
                 socketTimeoutMS: 45000,
@@ -75,8 +73,8 @@ class DatabaseConnection {
 
     handleDisconnection() {
         if (!this.isConnected) {
-            console.log('Attempting to reconnect to MongoDB...');
-            this.connect();
+            console.log('Attempting to reconnect to MongoDB in 5 seconds...');
+            setTimeout(() => this.connect(), 5000);
         }
     }
 

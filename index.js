@@ -5,7 +5,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import mongoSanitize from "express-mongo-sanitize";
-import xss from "xss-clean";
+import { xss } from "express-xss-sanitizer";
 import hpp from "hpp";
 import rateLimit from "express-rate-limit";
 import connectDB from "./database/db.js";
@@ -33,11 +33,8 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again later.",
 });
 
-// Security Middleware
+// Security Middleware - Headers & Rate Limiting
 app.use(helmet()); // Set security HTTP headers
-// app.use(mongoSanitize()); // Data sanitization against NoSQL query injection
-// app.use(xss()); // Data sanitization against XSS
-app.use(hpp()); // Prevent HTTP Parameter Pollution
 app.use("/api", limiter); // Apply rate limiting to all routes
 
 // Logging Middleware
@@ -46,9 +43,19 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // Body Parser Middleware
-app.use(express.json({ limit: "10kb" })); // Body limit is 10kb
+app.use(express.json({ 
+  limit: "10kb",
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+})); 
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
+
+// Security Middleware - Data Sanitization (Must be after Body Parser)
+app.use(mongoSanitize()); // Data sanitization against NoSQL query injection
+app.use(xss()); // Data sanitization against XSS
+app.use(hpp()); // Prevent HTTP Parameter Pollution
 
 // CORS Configuration
 app.use(
@@ -87,7 +94,7 @@ app.use((req, res) => {
 
 // Global Error Handler.
 app.use((err, req, res, next) => {
-  console.error(err);
+  console.error(err.stack);
   return res.status(err.statusCode || 500).json({
     status: "error",
     message: err.message || "Internal server error",

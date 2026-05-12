@@ -51,7 +51,7 @@ export const initiateStripeCheckout = catchAsync(async (req, res, next) => {
           currency: "usd",
           product_data: {
             name: course.title,
-            images: [course.thumbnail],
+            ...(course.thumbnail && { images: [course.thumbnail] }),
             description: course.subtitle || "Course access",
           },
           unit_amount: Math.round(course.price * 100), // Convert to cents
@@ -120,7 +120,7 @@ export const handleStripeWebhook = catchAsync(async (req, res, next) => {
       });
 
       await User.findByIdAndUpdate(userId, {
-        $push: { enrolledCourses: { course: courseId } }
+        $addToSet: { enrolledCourses: { course: courseId } }
       });
     }
   }
@@ -168,7 +168,7 @@ export const getPurchasedCourses = catchAsync(async (req, res, next) => {
     }
   });
 
-  const purchasedCourses = purchases.map(p => p.course);
+const purchasedCourses = purchases.map(p => p.course).filter(Boolean);
 
   res.status(200).json({
     success: true,

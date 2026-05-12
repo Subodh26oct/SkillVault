@@ -104,8 +104,12 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
   // Handle avatar update
   if (req.file) {
     // Delete old avatar if it's not the default one
-    if (user.avatar && user.avatar !== "default-avatar.png") {
-      const publicId = user.avatar.split("/").pop().split(".")[0]; 
+    if (user.avatar && !user.avatar.includes("default-avatar")) {
+      // Extract public ID: handle Cloudinary URLs with folders
+      const urlParts = user.avatar.split("/");
+      const filename = urlParts.pop().split(".")[0].split("?")[0]; // Remove extension and query params
+      const folder = urlParts.slice(urlParts.indexOf("upload") + 2).join("/"); // Get folder path after version
+      const publicId = folder ? `${folder}/${filename}` : filename;
       await deleteMediaFromCloudinary(publicId);
     }
     const result = await uploadMedia(req.file.path);
@@ -127,11 +131,15 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
 export const changeUserPassword = catchAsync(async (req, res, next) => {
   const { oldPassword, newPassword } = req.body;
 
-  if (!oldPassword || !newPassword) {
-    return next(new AppError("Please provide old and new password", 400));
+  const user = await User.findById(req.user._id).select("+password");
+
+  if (!user) {
+    return next(new AppError("User not found", 404));
   }
 
-  const user = await User.findById(req.user._id).select("+password");
+  if (!(await user.comparePassword(oldPassword))) {
+    return next(new AppError("Invalid old password", 401));
+  }
 
   if (!(await user.comparePassword(oldPassword))) {
     return next(new AppError("Invalid old password", 401));
@@ -205,6 +213,14 @@ export const resetPassword = catchAsync(async (req, res, next) => {
 
   if (!user) {
     return next(new AppError("Token is invalid or has expired", 400));
+  }
+
+  if (!user) {
+    return next(new AppError("Token is invalid or has expired", 400));
+  }
+
+  if (!req.body.password) {
+    return next(new AppError("Please provide a new password", 400));
   }
 
   user.password = req.body.password;

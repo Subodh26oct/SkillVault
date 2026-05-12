@@ -31,7 +31,7 @@ export const createRazorpayOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("You have already purchased this course", 400));
   }
 
-  const amount = Math.round(course.price * 100); // Razorpay expects amount in smallest currency unit (paise for INR)
+  const amount = Math.floor(course.price * 100); // Razorpay expects amount in smallest currency unit (paise for INR)
 
   const options = {
     amount,
@@ -77,25 +77,45 @@ export const verifyPayment = catchAsync(async (req, res, next) => {
   const isAuthentic = expectedSignature === razorpay_signature;
 
   if (isAuthentic) {
-    // Update purchase record
-    const purchase = await CoursePurchase.findByIdAndUpdate(
-      purchaseId,
-      {
-        status: "completed",
-        paymentId: razorpay_payment_id
-      },
-      { new: true }
-    );
-
-    if (purchase) {
+    // Use a transaction for atomicity
+    const session = await CoursePurchase.startSession();
+    session.startTransaction();
+    
+    try {
+      // Update purchase record
+      const purchase = await CoursePurchase.findByIdAndUpdate(
+        purchaseId,
+        {
+          status: "completed",
+          paymentId: razorpay_payment_id
+        },
+        { new: true, session }
+      );
+      
+      if (!purchase) {
+        await session.abortTransaction();
+        return next(new AppError("Purchase record not found", 404));
+      }
+      
       // Enroll user in the course
-      await Course.findByIdAndUpdate(courseId, {
-        $addToSet: { enrolledStudents: userId }
-      });
-
-      await User.findByIdAndUpdate(userId, {
-        $push: { enrolledCourses: { course: courseId } }
-      });
+      await Course.findByIdAndUpdate(
+        courseId, 
+        { $addToSet: { enrolledStudents: userId } },
+        { session }
+      );
+      
+      await User.findByIdAndUpdate(
+        userId, 
+        { $addToSet: { enrolledCourses: { course: courseId } } },
+        { session }
+      );
+      
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
 
     res.status(200).json({

@@ -34,9 +34,14 @@ export const createNewCourse = catchAsync(async (req, res, next) => {
   });
 
   // Add course to user's created courses
-  await User.findByIdAndUpdate(req.user._id, {
-    $push: { createdCourses: course._id }
-  });
+  try {
+    await User.findByIdAndUpdate(req.user._id, {
+      $push: { createdCourses: course._id }
+    });
+  } catch (error) {
+    await Course.findByIdAndDelete(course._id);
+    throw error;
+  }
 
   res.status(201).json({
     success: true,

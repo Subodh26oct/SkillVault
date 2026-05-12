@@ -98,17 +98,27 @@ export const verifyPayment = catchAsync(async (req, res, next) => {
       }
       
       // Enroll user in the course
-      await Course.findByIdAndUpdate(
+      const courseUpdate = await Course.findByIdAndUpdate(
         courseId, 
         { $addToSet: { enrolledStudents: userId } },
         { session }
       );
       
-      await User.findByIdAndUpdate(
+      if (!courseUpdate) {
+        await session.abortTransaction();
+        return next(new AppError("Course not found", 404));
+      }
+      
+      const userUpdate = await User.findByIdAndUpdate(
         userId, 
         { $addToSet: { enrolledCourses: { course: courseId } } },
         { session }
       );
+      
+      if (!userUpdate) {
+        await session.abortTransaction();
+        return next(new AppError("User not found", 404));
+      }
       
       await session.commitTransaction();
     } catch (error) {

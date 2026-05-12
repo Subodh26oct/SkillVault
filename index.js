@@ -98,6 +98,10 @@ app.use((err, req, res, next) => {
     message: err.message,
     statusCode: err.statusCode,
     stack: err.stack,
+    method: req.method,
+    url: req.originalUrl || req.url,
+    ip: req.ip || req.connection.remoteAddress,
+    userAgent: req.get('user-agent'),
   });
   return res.status(err.statusCode || 500).json({
     status: "error",

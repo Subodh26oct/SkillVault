@@ -108,7 +108,8 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
       // Extract public ID: handle Cloudinary URLs with folders
       const urlParts = user.avatar.split("/");
       const filename = urlParts.pop().split(".")[0].split("?")[0]; // Remove extension and query params
-      const folder = urlParts.slice(urlParts.indexOf("upload") + 2).join("/"); // Get folder path after version
+      const uploadIndex = urlParts.indexOf("upload");
+      const folder = uploadIndex !== -1 ? urlParts.slice(uploadIndex + 2).join("/") : "";
       const publicId = folder ? `${folder}/${filename}` : filename;
       await deleteMediaFromCloudinary(publicId);
     }

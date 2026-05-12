@@ -11,12 +11,9 @@ export const validate = (validations) => {
             return next();
         }
 
-        const extractedErrors = errors.array().map(err => ({
-            field: err.path,
-            message: err.msg
-        }));
+        const extractedErrors = errors.array().map(err => err.msg);
 
-        throw new AppError('Validation failed', 400, extractedErrors);
+        return next(new AppError(`Validation failed: ${extractedErrors.join(', ')}`, 400));
     };
 };
 

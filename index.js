@@ -53,14 +53,14 @@ app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 
 // Security Middleware - Data Sanitization (Must be after Body Parser)
-app.use(mongoSanitize()); // Data sanitization against NoSQL query injection
+// app.use(mongoSanitize()); // Incompatible with Express 5 (Cannot set property query of #<IncomingMessage> which has only a getter)
 app.use(xss()); // Data sanitization against XSS
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
 // CORS Configuration
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: [process.env.CLIENT_URL || "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
     allowedHeaders: [

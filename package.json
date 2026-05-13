@@ -31,7 +31,10 @@
     "multer": "^2.1.1",
     "nodemailer": "^8.0.7",
     "nodemon": "^3.1.14",
+    "openai": "^6.37.0",
     "razorpay": "^2.9.6",
-    "stripe": "^22.1.1"
+    "stripe": "^22.1.1",
+    "winston": "^3.19.0",
+    "zod": "^4.4.3"
   }
 }

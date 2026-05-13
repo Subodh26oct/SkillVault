@@ -1,6 +1,7 @@
 import { Course } from "../models/course.model.js";
 import { Lecture } from "../models/lecture.model.js";
 import { User } from "../models/user.model.js";
+import { CoursePurchase } from "../models/coursePurchase.model.js";
 import { deleteMediaFromCloudinary, uploadMedia } from "../utils/cloudinary.js";
 import { catchAsync } from "../middleware/error.middleware.js";
 import { AppError } from "../middleware/error.middleware.js";
@@ -29,6 +30,7 @@ export const createNewCourse = catchAsync(async (req, res, next) => {
     category,
     level,
     price,
+    isPublished: req.body.isPublished === true || req.body.isPublished === "true",
     thumbnail: result.secure_url,
     instructor: req.user._id
   });
@@ -107,11 +109,40 @@ export const getPublishedCourses = catchAsync(async (req, res, next) => {
  * @route GET /api/v1/courses/my-courses
  */
 export const getMyCreatedCourses = catchAsync(async (req, res, next) => {
-  const courses = await Course.find({ instructor: req.user._id });
+  const courses = await Course.find({ instructor: req.user._id })
+    .populate({ path: "lectures", select: "title duration isPreview" });
 
   res.status(200).json({
     success: true,
     courses
+  });
+});
+
+export const getInstructorAnalytics = catchAsync(async (req, res) => {
+  const courses = await Course.find({ instructor: req.user._id }).select(
+    "title price enrolledStudents isPublished createdAt"
+  );
+  const courseIds = courses.map((course) => course._id);
+  const purchases = await CoursePurchase.find({
+    course: { $in: courseIds },
+    status: "completed",
+  });
+
+  const revenue = purchases.reduce((total, purchase) => total + purchase.amount, 0);
+  const students = courses.reduce(
+    (total, course) => total + course.enrolledStudents.length,
+    0
+  );
+
+  res.status(200).json({
+    success: true,
+    analytics: {
+      totalCourses: courses.length,
+      publishedCourses: courses.filter((course) => course.isPublished).length,
+      students,
+      revenue,
+      purchases: purchases.length,
+    },
   });
 });
 
@@ -146,7 +177,7 @@ export const updateCourseDetails = catchAsync(async (req, res, next) => {
   course = await Course.findByIdAndUpdate(
     courseId,
     {
-      title,
+    title,
       subtitle,
       description,
       category,
@@ -162,6 +193,52 @@ export const updateCourseDetails = catchAsync(async (req, res, next) => {
     success: true,
     message: "Course updated successfully",
     course
+  });
+});
+
+export const deleteCourse = catchAsync(async (req, res, next) => {
+  const course = await Course.findById(req.params.courseId).populate("lectures");
+
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  if (
+    course.instructor.toString() !== req.user._id.toString() &&
+    req.user.role !== "admin"
+  ) {
+    return next(new AppError("You are not authorized to delete this course", 403));
+  }
+
+  if (course.thumbnail) {
+    const publicId = course.thumbnail.split("/").pop().split(".")[0];
+    await deleteMediaFromCloudinary(publicId);
+  }
+
+  await Promise.all(
+    course.lectures.map(async (lecture) => {
+      if (lecture.publicId) {
+        await deleteMediaFromCloudinary(lecture.publicId);
+      }
+      await Lecture.findByIdAndDelete(lecture._id);
+    })
+  );
+
+  await User.updateMany(
+    {},
+    {
+      $pull: {
+        createdCourses: course._id,
+        enrolledCourses: { course: course._id },
+      },
+    }
+  );
+  await CoursePurchase.deleteMany({ course: course._id, status: { $ne: "completed" } });
+  await Course.findByIdAndDelete(course._id);
+
+  res.status(200).json({
+    success: true,
+    message: "Course deleted successfully",
   });
 });
 
@@ -212,6 +289,7 @@ export const addLectureToCourse = catchAsync(async (req, res, next) => {
     description,
     videoUrl: result.secure_url,
     publicId: result.public_id || "placeholder_id",
+    duration: Number(req.body.duration || 0),
     isPreview: isPreview === 'true' || isPreview === true,
     order: course.lectures.length + 1
   });
@@ -223,6 +301,40 @@ export const addLectureToCourse = catchAsync(async (req, res, next) => {
     success: true,
     message: "Lecture added successfully",
     lecture
+  });
+});
+
+export const deleteLectureFromCourse = catchAsync(async (req, res, next) => {
+  const { courseId, lectureId } = req.params;
+
+  const course = await Course.findById(courseId);
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  if (
+    course.instructor.toString() !== req.user._id.toString() &&
+    req.user.role !== "admin"
+  ) {
+    return next(new AppError("You are not authorized to delete lectures from this course", 403));
+  }
+
+  const lecture = await Lecture.findById(lectureId);
+  if (!lecture) {
+    return next(new AppError("Lecture not found", 404));
+  }
+
+  if (lecture.publicId) {
+    await deleteMediaFromCloudinary(lecture.publicId);
+  }
+
+  await Lecture.findByIdAndDelete(lectureId);
+  course.lectures.pull(lectureId);
+  await course.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Lecture deleted successfully",
   });
 });
 

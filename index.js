@@ -1,10 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import mongoSanitize from "express-mongo-sanitize";
 import { xss } from "express-xss-sanitizer";
 import hpp from "hpp";
 import rateLimit from "express-rate-limit";
@@ -16,6 +14,9 @@ import purchaseRoute from "./routes/purchaseCourse.route.js";
 import courseProgressRoute from "./routes/courseProgress.route.js";
 import razorpayRoute from "./routes/razorpay.routes.js";
 import healthRoute from "./routes/health.routes.js";
+import aiRoute from "./routes/ai.route.js";
+import adminRoute from "./routes/admin.route.js";
+import logger from "./utils/logger.js";
 
 // Load environment variables
 dotenv.config();
@@ -24,67 +25,101 @@ dotenv.config();
 await connectDB();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
-// Global rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later.",
+// ─── 1. CORS — Manual raw handler, MUST be the very first middleware ─────────
+const allowedOrigins = new Set(
+  [
+    process.env.CLIENT_URL,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+  ].filter(Boolean)
+);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type,Authorization,X-Requested-With,Accept,Origin"
+  );
+
+  // Short-circuit OPTIONS preflight immediately — before any other middleware
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
 });
 
-// Security Middleware - Headers & Rate Limiting
-app.use(helmet()); // Set security HTTP headers
-app.use("/api", limiter); // Apply rate limiting to all routes
-
-// Logging Middleware
-if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-}
-
-// Body Parser Middleware
-app.use(express.json({ 
-  limit: "10kb",
-  verify: (req, res, buf) => {
-    req.rawBody = buf;
-  }
-})); 
-app.use(express.urlencoded({ extended: true, limit: "10kb" }));
-app.use(cookieParser());
-
-// Security Middleware - Data Sanitization (Must be after Body Parser)
-// app.use(mongoSanitize()); // Incompatible with Express 5 (Cannot set property query of #<IncomingMessage> which has only a getter)
-app.use(xss()); // Data sanitization against XSS
-app.use(hpp()); // Prevent HTTP Parameter Pollution
-
-// CORS Configuration
+// ─── 2. Security Headers ─────────────────────────────────────────────────────
 app.use(
-  cors({
-    origin: [process.env.CLIENT_URL || "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "device-remember-token",
-      "Access-Control-Allow-Origin",
-      "Origin",
-      "Accept",
-    ],
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: false,
   })
 );
 
-// API Routes
+// ─── 3. Logging ──────────────────────────────────────────────────────────────
+if (process.env.NODE_ENV === "development") {
+  app.use(
+    morgan("dev", {
+      stream: { write: (message) => logger.http(message.trim()) },
+    })
+  );
+}
+
+// ─── 4. Body Parsers ─────────────────────────────────────────────────────────
+app.use(
+  express.json({
+    limit: "10mb",
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
+
+// ─── 5. Data Sanitization (after body parsers) ───────────────────────────────
+app.use(xss());
+app.use(hpp());
+
+// ─── 6. Rate Limiting ────────────────────────────────────────────────────────
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api", limiter);
+
+// ─── 7. API Routes ───────────────────────────────────────────────────────────
 app.use("/api/v1/media", mediaRoute);
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/course", courseRoute);
 app.use("/api/v1/purchase", purchaseRoute);
 app.use("/api/v1/progress", courseProgressRoute);
 app.use("/api/v1/razorpay", razorpayRoute);
+app.use("/api/v1/ai", aiRoute);
+app.use("/api/v1/admin", adminRoute);
 app.use("/health", healthRoute);
 
-// 404 Handler
+// ─── 8. 404 Handler ──────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({
     status: "error",
@@ -92,17 +127,19 @@ app.use((req, res) => {
   });
 });
 
-// Global Error Handler.
+// ─── 9. Global Error Handler ─────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error({
-    message: err.message,
-    statusCode: err.statusCode,
-    stack: err.stack,
-    method: req.method,
-    url: req.originalUrl || req.url,
-    ip: req.ip || req.connection.remoteAddress,
-    userAgent: req.get('user-agent'),
-  });
+  logger.error(
+    JSON.stringify({
+      message: err.message,
+      statusCode: err.statusCode,
+      stack: err.stack,
+      method: req.method,
+      url: req.originalUrl || req.url,
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.get("user-agent"),
+    })
+  );
   return res.status(err.statusCode || 500).json({
     status: "error",
     message: err.message || "Internal server error",
@@ -110,9 +147,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
+// ─── 10. Start Server ────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(
-    ` Server running on port ${PORT} in ${process.env.NODE_ENV} mode`
+  logger.info(
+    `Server running on port ${PORT} in ${process.env.NODE_ENV || "development"} mode`
   );
 });

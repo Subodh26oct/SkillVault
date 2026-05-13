@@ -4,8 +4,11 @@ import { catchAsync } from "./error.middleware.js";
 import { User } from "../models/user.model.js";
 
 export const isAuthenticated = catchAsync(async (req, res, next) => {
-  // Check if token exists in cookies
-  const token = req.cookies.token;
+  const bearerToken = req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.split(" ")[1]
+    : null;
+  const token = req.cookies.token || bearerToken;
+
   if (!token) {
     throw new AppError(
       "You are not logged in. Please log in to get access.",
@@ -55,10 +58,15 @@ export const restrictTo = (...roles) => {
 // Optional authentication middleware
 export const optionalAuth = catchAsync(async (req, res, next) => {
   try {
-    const token = req.cookies.token;
+    const bearerToken = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : null;
+    const token = req.cookies.token || bearerToken;
+
     if (token) {
       const decoded = await jwt.verify(token, process.env.JWT_SECRET);
       req.id = decoded.userId;
+      req.user = await User.findById(req.id);
     }
     next();
   } catch (error) {

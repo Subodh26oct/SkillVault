@@ -5,6 +5,7 @@ import { deleteMediaFromCloudinary, uploadMedia } from "../utils/cloudinary.js";
 import { catchAsync } from "../middleware/error.middleware.js";
 import { AppError } from "../middleware/error.middleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import logger from "../utils/logger.js";
 import crypto from "crypto";
 
 /**
@@ -61,12 +62,18 @@ export const signOutUser = catchAsync(async (_, res) => {
   res.cookie("token", "none", {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   });
 
   res.status(200).json({
     success: true,
     message: "Logged out successfully"
   });
+});
+
+export const refreshUserSession = catchAsync(async (req, res) => {
+  generateToken(res, req.user, "Session refreshed successfully");
 });
 
 /**
@@ -130,7 +137,8 @@ export const updateUserProfile = catchAsync(async (req, res, next) => {
  * @route PATCH /api/v1/users/password
  */
 export const changeUserPassword = catchAsync(async (req, res, next) => {
-  const { oldPassword, newPassword } = req.body;
+  const { currentPassword, oldPassword, newPassword } = req.body;
+  const passwordToCheck = currentPassword || oldPassword;
 
   const user = await User.findById(req.user._id).select("+password");
 
@@ -138,11 +146,7 @@ export const changeUserPassword = catchAsync(async (req, res, next) => {
     return next(new AppError("User not found", 404));
   }
 
-  if (!(await user.comparePassword(oldPassword))) {
-    return next(new AppError("Invalid old password", 401));
-  }
-
-  if (!(await user.comparePassword(oldPassword))) {
+  if (!(await user.comparePassword(passwordToCheck))) {
     return next(new AppError("Invalid old password", 401));
   }
 
@@ -172,8 +176,9 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   const resetToken = user.getResetPasswordToken();
   await user.save({ validateBeforeSave: false });
 
-  const resetUrl = `${req.protocol}://${req.get("host")}/api/v1/users/reset-password/${resetToken}`;
-  const message = `You are receiving this email because you (or someone else) has requested the reset of a password. Please make a POST request to: \n\n ${resetUrl}`;
+  const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+  const resetUrl = `${clientUrl}/auth/reset-password/${resetToken}`;
+  const message = `A password reset was requested for your SkillVault account. Open this link to set a new password: ${resetUrl}`;
 
   try {
     await sendEmail({
@@ -187,7 +192,7 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
       message: "Email sent",
     });
   } catch (error) {
-    console.error("Email could not be sent:", error);
+    logger.error(`Password reset email failed for ${user.email}: ${error.message}`);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
 
@@ -211,10 +216,6 @@ export const resetPassword = catchAsync(async (req, res, next) => {
     resetPasswordToken,
     resetPasswordExpire: { $gt: Date.now() },
   });
-
-  if (!user) {
-    return next(new AppError("Token is invalid or has expired", 400));
-  }
 
   if (!user) {
     return next(new AppError("Token is invalid or has expired", 400));
@@ -257,6 +258,8 @@ export const deleteUserAccount = catchAsync(async (req, res, next) => {
   res.cookie("token", "none", {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   });
 
   res.status(200).json({

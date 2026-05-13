@@ -1,78 +1,93 @@
-# SkillVault LMS - Enterprise-Grade Backend API
+# SkillVault AI LMS
 
-![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
-![Express.js](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge)
-![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
-![Stripe](https://img.shields.io/badge/Stripe-626CD9?style=for-the-badge&logo=Stripe&logoColor=white)
-![Razorpay](https://img.shields.io/badge/Razorpay-02042B?style=for-the-badge&logo=razorpay&logoColor=3395FF)
-![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=Cloudinary&logoColor=white)
+SkillVault is an AI-powered LMS SaaS platform with secure authentication, instructor dashboards, AI learning tools, Stripe and Razorpay payments, Cloudinary media uploads, and course progress tracking.
 
-An enterprise-ready, highly scalable backend infrastructure for **SkillVault**, a comprehensive E-Learning Platform (LMS). Engineered using Node.js and MongoDB, this RESTful API is designed with performance, data integrity, and security at its core.
+## Tech Stack
 
-It features robust ACID-compliant database transactions, dual-gateway payment processing with cryptographic webhook verification, and automated cloud media management.
+- Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI components, React Query, Zustand, React Hook Form, Zod, Framer Motion, Lucide, Sonner, next-themes
+- Backend: Node.js, Express.js, MongoDB, Mongoose
+- Services: Cloudinary, Stripe, Razorpay, Resend SMTP, OpenAI API
+- Security: HTTP-only JWT cookies, RBAC, Helmet, rate limiting, XSS sanitization, HPP protection, Zod validation
 
-## 🚀 Architectural Highlights & Core Features
+## Features
 
-* **Atomic Database Transactions:** Implements Mongoose `ClientSession` and transactions for payment workflows, ensuring strict atomicity (ACID compliance) and preventing data corruption or orphaned records during course enrollment.
-* **Dual Payment Gateway Orchestration:** Seamlessly integrates both **Stripe** and **Razorpay**. Utilizes Express raw body parsing to validate HMAC-SHA256 cryptographic webhook signatures, securing the platform against fraudulent payment events.
-* **Role-Based Access Control (RBAC):** Secure authentication and authorization flow utilizing HTTP-only JWT cookies. Enforces strict resource access across `Student`, `Instructor`, and `Admin` roles.
-* **Automated Media Processing Pipeline:** Integrates **Multer** and **Cloudinary** for scalable, asynchronous video and image processing, optimizing media delivery for front-end consumption.
-* **Advanced State Management:** Leverages Mongoose pre-save hooks and complex aggregation pipelines to track granular user telemetry, including lecture watch-time and overall course completion percentages.
-* **Hardened Security & Sanitization:** Secured against OWASP Top 10 vulnerabilities using `helmet` (HTTP headers), `express-rate-limit` (brute-force mitigation), `xss-clean` (Cross-Site Scripting protection), and `express-mongo-sanitize` (NoSQL injection prevention).
+- Student dashboard with purchased courses and progress sync
+- Instructor dashboard with course creation, lecture upload, analytics, earnings, and course management
+- Admin console for users, courses, payments, and platform analytics
+- Course listing, course details, curriculum, checkout, and learning player
+- Stripe checkout and Razorpay order verification
+- AI assistant, notes generator, quiz generator, and roadmap generator
+- Cloudinary thumbnails and video uploads
+- Production-friendly logging with Winston
 
-## 🛠️ Technology Stack
+## Project Structure
 
-* **Core:** Node.js, Express.js
-* **Database:** MongoDB (Atlas), Mongoose ODM
-* **Payment Gateways:** Stripe API, Razorpay API
-* **Authentication:** JSON Web Tokens (JWT), bcryptjs
-* **Storage / CDN:** Cloudinary, Multer
-* **Email Service:** Resend API (SMTP)
+```txt
+.
+├── controllers/
+├── middleware/
+├── models/
+├── routes/
+├── schemas/
+├── utils/
+└── frontend/
+    └── src/
+        ├── app/
+        ├── components/
+        ├── providers/
+        ├── services/
+        ├── store/
+        ├── schemas/
+        └── types/
+```
 
-## 📂 Data Modeling (NoSQL)
+## Local Development
 
-The database relies on a highly optimized, document-based NoSQL architecture utilizing reference pointers for scalability:
-* `User`: Manages authentication metadata and arrays of deeply nested subdocuments for course enrollments.
-* `Course`: High-level curriculum entity containing metadata, pricing schemas, and normalized references to instructor and lecture entities.
-* `Lecture`: Modular content units linked to Cloudinary CDN endpoints.
-* `CoursePurchase`: Transactional ledger tracking payment status, intent IDs, and methodology.
-* `CourseProgress`: Telemetry model mapping user-specific progression metrics against curriculum structures.
+Install backend dependencies:
 
-## ⚙️ Local Development & Setup
+```bash
+npm install
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd SkillVault-Backend
-   ```
+Install frontend dependencies:
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+cd frontend
+npm install
+```
 
-3. **Environment Configuration**
-   Create a `.env` file referencing `env.example`. Required keys include:
-   * `MONGO_URI` (MongoDB connection string)
-   * `JWT_SECRET` (Cryptographic signing key)
-   * `CLOUDINARY_*` (Asset management credentials)
-   * `STRIPE_*` & `RAZORPAY_*` (API keys and Webhook secrets)
+Create `.env` from `env.example`, then create `frontend/.env.local` from `frontend/.env.local.example`.
 
-4. **Initialize Server**
-   ```bash
-   npm run dev
-   ```
-   The application boots on `http://localhost:8000` and establishes the database connection pool.
+Run the backend:
 
-## 🌐 API Reference (REST)
+```bash
+npm run dev
+```
 
-* **Identity Access Management:** `/api/v1/user`
-* **Curriculum Management:** `/api/v1/course`
-* **Asset Uploads:** `/api/v1/media`
-* **Stripe Processing:** `/api/v1/purchase`
-* **Razorpay Processing:** `/api/v1/razorpay`
-* **Telemetry & Progress:** `/api/v1/progress`
+Run the frontend:
 
-## 👨‍💻 Engineering Details
+```bash
+cd frontend
+npm run dev
+```
 
-Built by **Subodh-SkillVault** to demonstrate proficiency in scalable, secure, and resilient backend architecture, API-first design principles, and complex third-party system integrations.
+Default URLs:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
+- API base: `http://localhost:8000/api/v1`
+
+## API Areas
+
+- Auth and profile: `/api/v1/user`
+- Courses and lectures: `/api/v1/course`
+- Stripe purchases: `/api/v1/purchase`
+- Razorpay payments: `/api/v1/razorpay`
+- Course progress: `/api/v1/progress`
+- AI features: `/api/v1/ai`
+- Admin analytics: `/api/v1/admin`
+- Health check: `/health`
+
+## Positioning
+
+SkillVault is positioned as an AI-powered LMS SaaS platform with secure authentication, instructor dashboards, AI learning assistant, AI-generated quizzes and notes, Stripe and Razorpay integration, and real-time course progress tracking.

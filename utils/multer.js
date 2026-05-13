@@ -1,4 +1,5 @@
 import multer from "multer";
+import path from "path";
 
 // Configure secure disk storage
 const storage = multer.diskStorage({
@@ -8,27 +9,33 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     // Generate a unique filename and preserve the original extension
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = file.originalname.split('.').pop();
-    cb(null, `${file.fieldname}-${uniqueSuffix}.${ext}`);
-  }
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+  },
 });
 
-// File filter to ensure only images are uploaded
+// File filter — accept images (thumbnails) AND videos (lectures)
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
+  if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
     cb(null, true);
   } else {
-    cb(new Error("Unsupported file format! Please upload an image."), false);
+    cb(
+      new Error(
+        "Unsupported file format! Only image and video files are allowed."
+      ),
+      false
+    );
   }
 };
 
 // Initialize multer with limits and filters
-const upload = multer({ 
+// Videos can be much larger — allow up to 500 MB
+const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB limit
+    fileSize: 500 * 1024 * 1024, // 500 MB (Cloudinary handles the actual upload)
   },
-  fileFilter 
+  fileFilter,
 });
 
 export default upload;

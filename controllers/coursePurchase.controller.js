@@ -60,8 +60,8 @@ export const initiateStripeCheckout = catchAsync(async (req, res, next) => {
       },
     ],
     mode: "payment",
-    success_url: `${process.env.CLIENT_URL || "http://localhost:5173"}/course-progress/${courseId}?success=true`,
-    cancel_url: `${process.env.CLIENT_URL || "http://localhost:5173"}/course-details/${courseId}?canceled=true`,
+    success_url: `${process.env.CLIENT_URL || "http://localhost:3000"}/courses/${courseId}/learn?success=true`,
+    cancel_url: `${process.env.CLIENT_URL || "http://localhost:3000"}/courses/${courseId}?canceled=true`,
     metadata: {
       courseId: courseId.toString(),
       userId: userId.toString(),

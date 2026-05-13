@@ -1,93 +1,137 @@
-# SkillVault AI LMS
+# SkillVault AI — Enterprise-Grade LMS SaaS Platform
 
-SkillVault is an AI-powered LMS SaaS platform with secure authentication, instructor dashboards, AI learning tools, Stripe and Razorpay payments, Cloudinary media uploads, and course progress tracking.
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Stripe](https://img.shields.io/badge/Stripe-626CD9?style=for-the-badge&logo=stripe&logoColor=white)](https://stripe.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
 
-## Tech Stack
+SkillVault is a high-performance, full-stack Learning Management System (LMS) designed for the modern era. It integrates cutting-edge AI capabilities with robust financial gateways and enterprise security patterns to deliver a premium learning experience for students and a powerful dashboard for instructors.
 
-- Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI components, React Query, Zustand, React Hook Form, Zod, Framer Motion, Lucide, Sonner, next-themes
-- Backend: Node.js, Express.js, MongoDB, Mongoose
-- Services: Cloudinary, Stripe, Razorpay, Resend SMTP, OpenAI API
-- Security: HTTP-only JWT cookies, RBAC, Helmet, rate limiting, XSS sanitization, HPP protection, Zod validation
+---
 
-## Features
+## 🚀 Key Features
 
-- Student dashboard with purchased courses and progress sync
-- Instructor dashboard with course creation, lecture upload, analytics, earnings, and course management
-- Admin console for users, courses, payments, and platform analytics
-- Course listing, course details, curriculum, checkout, and learning player
-- Stripe checkout and Razorpay order verification
-- AI assistant, notes generator, quiz generator, and roadmap generator
-- Cloudinary thumbnails and video uploads
-- Production-friendly logging with Winston
+### 🤖 AI-Powered Learning Assistant
+- **AI Notes Generator:** Automatically synthesize lecture content into structured study notes.
+- **Smart Quiz Generator:** Create dynamic assessments based on course material to test student knowledge.
+- **Roadmap Generator:** Personalized learning paths generated via OpenAI for tailored educational journeys.
+- **Interactive AI Tutor:** Real-time assistance for students within the learning environment.
 
-## Project Structure
+### 💳 Financial & Payment Systems
+- **Dual Gateway Support:** Seamless integration with **Stripe** (Checkout & Webhooks) and **Razorpay** (Order Verification).
+- **Secure Transactions:** Enterprise-grade payment handling with signature verification and idempotent processing.
+- **Earnings Analytics:** Detailed revenue tracking and payout summaries for instructors.
 
-```txt
+### 🎬 Media & Content Delivery
+- **High-Performance Streaming:** Optimized video delivery via **Cloudinary** with adaptive bitrate support.
+- **Advanced Course Builder:** Drag-and-drop lecture management with thumbnail generation and asset optimization.
+- **Interactive Player:** Modern video player with progress persistence and course state sync.
+
+### 🛡️ Security & Architecture
+- **RBAC (Role-Based Access Control):** Granular permissions for Admins, Instructors, and Students.
+- **Advanced Security:** HTTP-only JWT cookies, Helmet.js headers, rate-limiting, and XSS sanitization.
+- **Production Logging:** Robust audit trails and error tracking using **Winston** and **Morgan**.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+| :--- | :--- |
+| **Frontend** | Next.js 15 (App Router), TypeScript, Tailwind CSS, Shadcn/UI, Framer Motion |
+| **Backend** | Node.js, Express.js, MongoDB (Mongoose) |
+| **State Management** | Zustand, React Query (TanStack) |
+| **Services** | Cloudinary (Media), Stripe & Razorpay (Payments), OpenAI (AI Models), Resend (Email) |
+| **DevOps** | Winston (Logging), Zod (Validation), ESLint, Prettier |
+
+---
+
+## 📂 Project Structure
+
+```bash
 .
-├── controllers/
-├── middleware/
-├── models/
-├── routes/
-├── schemas/
-├── utils/
-└── frontend/
-    └── src/
-        ├── app/
-        ├── components/
-        ├── providers/
-        ├── services/
-        ├── store/
-        ├── schemas/
-        └── types/
+├── controllers/      # Business logic & request handlers
+├── middleware/       # Auth guards, security, & validation
+├── models/           # Mongoose schemas & data modeling
+├── routes/           # API endpoint definitions
+├── utils/            # Helper functions (Logger, Cloudinary, AI)
+└── frontend/         # Next.js 15 Client application
+    ├── src/app/      # App router pages & layouts
+    ├── src/components/ # Atomic UI components (Shadcn)
+    ├── src/providers/ # Global context & state providers
+    └── src/services/ # API client (Axios/React Query)
 ```
 
-## Local Development
+---
 
-Install backend dependencies:
+## 🏁 Getting Started
 
+### 1. Prerequisites
+- Node.js (v18+)
+- MongoDB Atlas account
+- Cloudinary, Stripe, and OpenAI API Keys
+
+### 2. Installation
 ```bash
+# Install backend dependencies
 npm install
+
+# Install frontend dependencies
+cd frontend && npm install
 ```
 
-Install frontend dependencies:
-
+### 3. Environment Setup
+Create a `.env` in the root and `frontend/.env.local` using the provided templates:
 ```bash
-cd frontend
-npm install
+# Root .env
+PORT=8000
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_secret
+STRIPE_SECRET_KEY=your_stripe_key
+RAZORPAY_KEY_ID=your_razorpay_id
+CLOUDINARY_CLOUD_NAME=your_name
+OPENAI_API_KEY=your_openai_key
 ```
 
-Create `.env` from `env.example`, then create `frontend/.env.local` from `frontend/.env.local.example`.
-
-Run the backend:
-
+### 4. Running the App
 ```bash
+# Terminal 1: Backend
 npm run dev
+
+# Terminal 2: Frontend
+cd frontend && npm run dev
 ```
 
-Run the frontend:
+---
 
-```bash
-cd frontend
-npm run dev
-```
+## 🔒 Security Best Practices
+- **Rate Limiting:** Protects against Brute-Force and DoS attacks.
+- **XSS Protection:** Sanitizes all incoming data using `express-xss-sanitizer`.
+- **HPP:** Prevents HTTP Parameter Pollution.
+- **Security Headers:** Implemented via `Helmet` to secure the HTTP response.
 
-Default URLs:
+---
 
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:8000`
-- API base: `http://localhost:8000/api/v1`
+## 🌟 Roadmap & Future Evolution
+SkillVault is a living project. Upcoming features include:
+- [ ] **Community Forums:** Real-time discussion boards for student-instructor interaction.
+- [ ] **Live Classes:** Integration with Zoom/WebRTC for synchronous learning.
+- [ ] **Gamification:** Leaderboards, badges, and XP points to boost engagement.
+- [ ] **Mobile App:** Dedicated React Native application for learning on the go.
 
-## API Areas
+---
 
-- Auth and profile: `/api/v1/user`
-- Courses and lectures: `/api/v1/course`
-- Stripe purchases: `/api/v1/purchase`
-- Razorpay payments: `/api/v1/razorpay`
-- Course progress: `/api/v1/progress`
-- AI features: `/api/v1/ai`
-- Admin analytics: `/api/v1/admin`
-- Health check: `/health`
+## 🏷️ Keywords & Skills
+`MERN Stack` • `Next.js 15` • `TypeScript` • `SaaS Architecture` • `LMS Development` • `AI Integration` • `OpenAI API` • `Payment Gateways` • `Stripe` • `Razorpay` • `Cloudinary` • `JWT Auth` • `RBAC` • `Clean Code` • `Scalable Systems` • `Zustand` • `React Query` • `Tailwind CSS` • `RESTful APIs` • `Software Engineering`
 
-## Positioning
+---
 
-SkillVault is positioned as an AI-powered LMS SaaS platform with secure authentication, instructor dashboards, AI learning assistant, AI-generated quizzes and notes, Stripe and Razorpay integration, and real-time course progress tracking.
+## 📬 Connect & Collaborate
+I'm always looking to improve and expand SkillVault. If you have suggestions or want to collaborate, let's connect!
+
+**Subodh** -(https://github.com/Subodh26oct)
+**Project Link:** [https://github.com/Subodh26oct/SkillVault](https://github.com/Subodh26oct/SkillVault)
+
+> *Feel free to star ⭐ this repository if you find it useful!*

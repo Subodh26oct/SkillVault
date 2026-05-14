@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import dotenv from "dotenv";
+import path from "path";
 dotenv.config({});
 
 cloudinary.config({
@@ -19,11 +20,37 @@ if (
 }
 
 export const uploadMedia = async (file) => {
-  const uploadResponse = await cloudinary.uploader.upload(file, {
-    resource_type: "auto",
-    // Large video timeout
-    timeout: 120000,
-  });
+  const videoExtensions = new Set([".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"]);
+  const isVideo = videoExtensions.has(path.extname(file).toLowerCase());
+  const uploadOptions = {
+    resource_type: isVideo ? "video" : "auto",
+    timeout: 300000,
+  };
+
+  const uploadResponse = isVideo
+    ? await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_large(
+          file,
+          {
+            ...uploadOptions,
+            chunk_size: 20 * 1024 * 1024,
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+            if (result?.done === false) {
+              return;
+            }
+            resolve(result);
+          }
+        );
+
+        stream.on("error", reject);
+      })
+    : await cloudinary.uploader.upload(file, uploadOptions);
+
   return uploadResponse;
 };
 

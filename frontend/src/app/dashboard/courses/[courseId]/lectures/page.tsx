@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { courseService } from "@/services/api.service";
 
 export default function ManageLecturesPage() {
   const params = useParams<{ courseId: string }>();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const courseQuery = useQuery({
     queryKey: ["course-manage", params.courseId],
@@ -22,14 +23,17 @@ export default function ManageLecturesPage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     setLoading(true);
-    const formData = new FormData(event.currentTarget);
 
     try {
       await courseService.uploadLecture(params.courseId, formData);
       toast.success("Lecture uploaded");
-      event.currentTarget.reset();
-      courseQuery.refetch();
+      form.reset();
+      await queryClient.invalidateQueries({ queryKey: ["course-manage", params.courseId] });
+      await queryClient.invalidateQueries({ queryKey: ["course", params.courseId] });
+      await courseQuery.refetch();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Could not upload lecture"));
     } finally {
@@ -41,7 +45,9 @@ export default function ManageLecturesPage() {
     try {
       await courseService.deleteLecture(params.courseId, lectureId);
       toast.success("Lecture deleted");
-      courseQuery.refetch();
+      await queryClient.invalidateQueries({ queryKey: ["course-manage", params.courseId] });
+      await queryClient.invalidateQueries({ queryKey: ["course", params.courseId] });
+      await courseQuery.refetch();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Could not delete lecture"));
     }

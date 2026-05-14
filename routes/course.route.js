@@ -1,5 +1,5 @@
 import express from "express";
-import { isAuthenticated, restrictTo } from "../middleware/auth.middleware.js";
+import { isAuthenticated, optionalAuth, restrictTo } from "../middleware/auth.middleware.js";
 import {
   createNewCourse,
   searchCourses,
@@ -22,6 +22,12 @@ const router = express.Router();
 // Public routes
 router.get("/published", getPublishedCourses);
 router.get("/search", searchCourses);
+router.get(
+  "/c/:courseId",
+  optionalAuth,
+  validateRequest(courseSchemas.courseId),
+  getCourseDetails
+);
 
 // Protected routes
 router.use(isAuthenticated);
@@ -47,7 +53,6 @@ router.get(
 router
   .route("/c/:courseId")
   .all(validateRequest(courseSchemas.courseId))
-  .get(getCourseDetails)
   .patch(
     restrictTo("instructor"),
     upload.single("thumbnail"),

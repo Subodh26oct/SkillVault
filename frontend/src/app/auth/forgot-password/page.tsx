@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { ForgotPasswordInput, ForgotPasswordSchema } from "@/schemas/validation"
 import { authService } from "@/services/api.service";
 
 export default function ForgotPasswordPage() {
+  const [resetUrl, setResetUrl] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -22,8 +24,14 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (values: ForgotPasswordInput) => {
     try {
-      await authService.forgotPassword(values.email);
-      toast.success("Reset link sent if the email exists");
+      setResetUrl(null);
+      const response = await authService.forgotPassword(values.email);
+      if (response.url) {
+        setResetUrl(response.url);
+        toast.success("Development reset link created");
+        return;
+      }
+      toast.success("Reset link sent");
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Could not send reset link"));
     }
@@ -46,6 +54,14 @@ export default function ForgotPasswordPage() {
             Send reset link
           </Button>
         </form>
+        {resetUrl && (
+          <Link
+            href={resetUrl}
+            className="mt-4 block rounded-md border border-cyan-200 bg-cyan-50 px-4 py-3 text-center text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-100 dark:border-cyan-900 dark:bg-cyan-950/40 dark:text-cyan-300 dark:hover:bg-cyan-950"
+          >
+            Open reset link
+          </Link>
+        )}
         <Link href="/auth/login" className="mt-6 block text-center text-sm text-cyan-600">
           Back to sign in
         </Link>

@@ -6,7 +6,83 @@ const genAI = new GoogleGenerativeAI(
   process.env.GOOGLE_GEMINI_API_KEY || "missing-api-key",
 );
 
-const model = process.env.GOOGLE_GEMINI_MODEL || "gemini-1.5-flash";
+const model = process.env.GOOGLE_GEMINI_MODEL || "gemini-2.5-flash-lite";
+const demoFallbackEnabled =
+  process.env.NODE_ENV !== "production" &&
+  process.env.AI_DEMO_FALLBACK === "true";
+
+const createDemoResponse = ({ system, prompt, json }) => {
+  const lowerSystem = system.toLowerCase();
+
+  if (json && lowerSystem.includes("quiz")) {
+    return JSON.stringify({
+      questions: [
+        {
+          question: "What is the main learning goal of this lesson?",
+          options: [
+            "Understand the core concept",
+            "Skip the fundamentals",
+            "Memorize without context",
+            "Avoid practice",
+          ],
+          answer: "Understand the core concept",
+          explanation:
+            "A good LMS lesson helps students connect the main idea with practical use.",
+        },
+      ],
+    });
+  }
+
+  if (json && lowerSystem.includes("roadmap")) {
+    return JSON.stringify({
+      goal: "Project showcase learning path",
+      duration: "4 weeks",
+      weeklyPlan: [
+        {
+          week: 1,
+          focus: "Fundamentals",
+          tasks: ["Review course material", "Complete starter exercises"],
+        },
+        {
+          week: 2,
+          focus: "Practice",
+          tasks: ["Build a small feature", "Take a short quiz"],
+        },
+      ],
+      projects: ["Mini LMS feature demo"],
+      milestones: ["Complete first module", "Present a working demo"],
+    });
+  }
+
+  if (lowerSystem.includes("study assets")) {
+    return [
+      "## Demo Study Notes",
+      "",
+      "- Identify the main concept from the lesson.",
+      "- Connect it to one practical example.",
+      "- Review the common mistakes before moving forward.",
+      "",
+      "### Quick Review",
+      "- What problem does this topic solve?",
+      "- Where would you apply it in a real project?",
+    ].join("\n");
+  }
+
+  const question = prompt.match(/Student question:\s*([\s\S]*)/)?.[1]?.trim();
+
+  return [
+    "I can help with that. For this LMS project demo, focus on the core idea first, then show how it works inside the course flow.",
+    "",
+    question ? `Your question: ${question}` : "",
+    "",
+    "Suggested next steps:",
+    "1. Review the lesson objective.",
+    "2. Try one small example.",
+    "3. Mark progress after completing the lecture.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
 
 const ensureGeminiKey = () => {
   if (!process.env.GOOGLE_GEMINI_API_KEY) {
@@ -41,10 +117,26 @@ const createTextResponse = async ({ system, prompt, json = false }) => {
 
     return text;
   } catch (err) {
+    const errorMessage = String(err?.message || "").toLowerCase();
+
     // Google Gemini quota exceeded or rate limited
-    if (err?.status === 429 || err?.message?.includes("quota")) {
+    if (
+      err?.status === 429 ||
+      errorMessage.includes("quota") ||
+      errorMessage.includes("resource_exhausted")
+    ) {
+      if (demoFallbackEnabled) {
+        return createDemoResponse({ system, prompt, json });
+      }
+
       throw new AppError(
         "AI quota exceeded. Please check your Google Gemini billing or try again later.",
+        503,
+      );
+    }
+    if (err?.status === 404 || errorMessage.includes("is not found")) {
+      throw new AppError(
+        `Configured Gemini model "${model}" is not available. Set GOOGLE_GEMINI_MODEL=gemini-2.5-flash-lite and restart the backend.`,
         503,
       );
     }

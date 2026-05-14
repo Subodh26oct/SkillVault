@@ -190,9 +190,20 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Email sent",
+      ...(process.env.NODE_ENV !== "production" && { url: resetUrl }),
     });
   } catch (error) {
     logger.error(`Password reset email failed for ${user.email}: ${error.message}`);
+
+    if (process.env.NODE_ENV !== "production") {
+      return res.status(200).json({
+        success: true,
+        message:
+          "Email provider rejected the reset email. Use the development reset link.",
+        url: resetUrl,
+      });
+    }
+
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
 

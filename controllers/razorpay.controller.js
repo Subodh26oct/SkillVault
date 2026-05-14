@@ -11,6 +11,8 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+const usdToInrRate = Number(process.env.RAZORPAY_USD_TO_INR_RATE || 83);
+
 export const createRazorpayOrder = catchAsync(async (req, res, next) => {
   const { courseId } = req.body;
   const userId = req.user._id;
@@ -31,7 +33,8 @@ export const createRazorpayOrder = catchAsync(async (req, res, next) => {
     return next(new AppError("You have already purchased this course", 400));
   }
 
-  const amount = Math.floor(course.price * 100); // Razorpay expects amount in smallest currency unit (paise for INR)
+  const amountInInr = Math.max(1, Math.round(course.price * usdToInrRate));
+  const amount = amountInInr * 100; // Razorpay expects amount in paise for INR
 
   const options = {
     amount,
@@ -49,11 +52,15 @@ export const createRazorpayOrder = catchAsync(async (req, res, next) => {
   const purchase = await CoursePurchase.create({
     course: courseId,
     user: userId,
-    amount: course.price,
+    amount: amountInInr,
     currency: "INR",
     status: "pending",
     paymentMethod: "razorpay",
-    paymentId: order.id
+    paymentId: order.id,
+    metadata: {
+      originalPriceUsd: String(course.price),
+      usdToInrRate: String(usdToInrRate),
+    },
   });
 
   res.status(200).json({

@@ -255,9 +255,34 @@ export const getCourseDetails = catchAsync(async (req, res, next) => {
     return next(new AppError("Course not found", 404));
   }
 
+  const isOwner =
+    req.user &&
+    course.instructor?._id?.toString() === req.user._id.toString();
+  const isAdmin = req.user?.role === "admin";
+  const purchase = req.user
+    ? await CoursePurchase.findOne({
+        course: course._id,
+        user: req.user._id,
+        status: "completed",
+      }).select("_id")
+    : null;
+  const canAccessAllVideos = isOwner || isAdmin || !!purchase;
+  const courseData = course.toObject();
+
+  if (!canAccessAllVideos) {
+    courseData.lectures = (courseData.lectures || []).map((lecture) => {
+      if (lecture.isPreview) {
+        return lecture;
+      }
+
+      const { videoUrl, publicId, ...lockedLecture } = lecture;
+      return lockedLecture;
+    });
+  }
+
   res.status(200).json({
     success: true,
-    course
+    course: courseData
   });
 });
 
@@ -284,11 +309,15 @@ export const addLectureToCourse = catchAsync(async (req, res, next) => {
 
   const result = await uploadMedia(req.file.path);
 
+  if (!result?.secure_url || !result?.public_id) {
+    return next(new AppError("Video upload failed. Please try a smaller MP4/WebM file.", 502));
+  }
+
   const lecture = await Lecture.create({
     title,
     description,
     videoUrl: result.secure_url,
-    publicId: result.public_id || "placeholder_id",
+    publicId: result.public_id,
     duration: Number(req.body.duration || 0),
     isPreview: isPreview === 'true' || isPreview === true,
     order: course.lectures.length + 1

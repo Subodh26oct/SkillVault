@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { AlertTriangle, Bot, RefreshCw, Send, X } from "lucide-react";
+import { AlertTriangle, Bot, RefreshCw, Send, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,13 +78,15 @@ export default function AiAssistant() {
   return (
     <div className="fixed bottom-5 right-5 z-50">
       {open && (
-        <div className="mb-3 flex w-[min(calc(100vw-2rem),400px)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+        <div className="mb-3 flex w-[min(calc(100vw-2rem),420px)] flex-col overflow-hidden rounded-xl border border-cyan-200/70 bg-white shadow-[0_24px_70px_-24px_rgba(6,182,212,0.45)] dark:border-cyan-900/70 dark:bg-slate-950">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 p-4 dark:border-slate-800">
+          <div className="flex items-center justify-between border-b border-cyan-100 bg-[linear-gradient(135deg,rgba(6,182,212,0.14),rgba(99,102,241,0.12),rgba(15,23,42,0.02))] p-4 dark:border-cyan-950 dark:bg-[linear-gradient(135deg,rgba(34,211,238,0.14),rgba(99,102,241,0.14),rgba(15,23,42,0.82))]">
             <div className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-cyan-500" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-cyan-200 bg-white text-cyan-600 shadow-sm dark:border-cyan-900 dark:bg-slate-900 dark:text-cyan-300">
+                <Bot className="h-5 w-5" />
+              </span>
               <p className="font-semibold">AI Learning Assistant</p>
-              <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-xs font-medium text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300">
+              <span className="rounded-full border border-cyan-200 bg-white/70 px-2 py-0.5 text-xs font-medium text-cyan-700 dark:border-cyan-900 dark:bg-slate-900/80 dark:text-cyan-300">
                 Beta
               </span>
             </div>
@@ -191,10 +193,13 @@ export default function AiAssistant() {
         onClick={() => setOpen((v) => !v)}
         size="lg"
         aria-label="Open AI assistant"
-        className="shadow-lg"
+        className="group relative h-14 overflow-hidden rounded-xl border border-cyan-300/70 bg-[linear-gradient(135deg,#0f172a,#155e75,#4f46e5)] px-5 text-white shadow-[0_18px_50px_-18px_rgba(6,182,212,0.85)] transition-transform hover:scale-[1.03] hover:bg-[linear-gradient(135deg,#111827,#0e7490,#4338ca)] dark:border-cyan-400/30 dark:shadow-[0_18px_50px_-18px_rgba(34,211,238,0.65)]"
       >
-        <Bot className="mr-2 h-5 w-5" />
-        AI
+        <span className="absolute inset-x-0 top-0 h-px bg-white/50" />
+        <span className="mr-3 flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/25">
+          <Sparkles className="h-4 w-4 transition-transform group-hover:rotate-12" />
+        </span>
+        <span className="text-base font-semibold tracking-normal">AI</span>
       </Button>
     </div>
   );

@@ -44,7 +44,10 @@ export default function AiAssistant() {
         },
       ]);
     } catch (error: unknown) {
-      const raw = getErrorMessage(error, "AI assistant is temporarily unavailable");
+      const raw = getErrorMessage(
+        error,
+        "AI assistant is temporarily unavailable",
+      );
 
       // Friendly quota / rate-limit message
       const isQuota =
@@ -54,7 +57,7 @@ export default function AiAssistant() {
         raw.toLowerCase().includes("exceeded");
 
       const friendlyMsg = isQuota
-        ? "⚠️ AI quota exceeded. The OpenAI plan needs a top-up. Please try again later or contact support."
+        ? "⚠️ AI quota exceeded. The Google Gemini plan needs a top-up. Please try again later or contact support."
         : raw;
 
       setMessages((prev) => [...prev, { role: "error", content: friendlyMsg }]);

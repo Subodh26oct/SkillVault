@@ -1,40 +1,51 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Course } from "../models/course.model.js";
 import { catchAsync, AppError } from "../middleware/error.middleware.js";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "missing-api-key",
-});
+const genAI = new GoogleGenerativeAI(
+  process.env.GOOGLE_GEMINI_API_KEY || "missing-api-key",
+);
 
-const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const model = process.env.GOOGLE_GEMINI_MODEL || "gemini-1.5-flash";
 
-const ensureOpenAIKey = () => {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new AppError("OpenAI API key is not configured", 503);
+const ensureGeminiKey = () => {
+  if (!process.env.GOOGLE_GEMINI_API_KEY) {
+    throw new AppError("Google Gemini API key is not configured", 503);
   }
 };
 
 const createTextResponse = async ({ system, prompt, json = false }) => {
-  ensureOpenAIKey();
+  ensureGeminiKey();
 
   try {
-    const completion = await openai.chat.completions.create({
-      model,
-      temperature: 0.4,
-      response_format: json ? { type: "json_object" } : undefined,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-    });
+    const generativeModel = genAI.getGenerativeModel({ model });
 
-    return completion.choices[0]?.message?.content || "";
+    const fullPrompt = `${system}\n\n${prompt}`;
+
+    const result = await generativeModel.generateContent(fullPrompt);
+    const response = await result.response;
+    const text = response.text();
+
+    // If JSON is required, extract JSON from response
+    if (json) {
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          JSON.parse(jsonMatch[0]); // Validate JSON
+          return jsonMatch[0];
+        }
+      } catch (e) {
+        // If JSON parsing fails, return the text as is and let caller handle
+      }
+    }
+
+    return text;
   } catch (err) {
-    // OpenAI quota exceeded or rate limited
-    if (err?.status === 429 || err?.code === "insufficient_quota") {
+    // Google Gemini quota exceeded or rate limited
+    if (err?.status === 429 || err?.message?.includes("quota")) {
       throw new AppError(
-        "AI quota exceeded. Please check your OpenAI billing or try again later.",
-        503
+        "AI quota exceeded. Please check your Google Gemini billing or try again later.",
+        503,
       );
     }
     throw err;
@@ -72,7 +83,7 @@ export const generateQuiz = catchAsync(async (req, res) => {
   const content = await createTextResponse({
     json: true,
     system:
-      "Generate LMS quiz JSON only. Use this exact shape: {\"questions\":[{\"question\":\"\",\"options\":[\"\",\"\",\"\",\"\"],\"answer\":\"\",\"explanation\":\"\"}]}",
+      'Generate LMS quiz JSON only. Use this exact shape: {"questions":[{"question":"","options":["","","",""],"answer":"","explanation":""}]}',
     prompt: `Topic: ${topic}\nDifficulty: ${difficulty}\nQuestion count: ${questionCount}\nLecture content: ${lectureContent || "No lecture content provided"}`,
   });
 
@@ -103,7 +114,7 @@ export const generateRoadmap = catchAsync(async (req, res) => {
   const roadmap = await createTextResponse({
     json: true,
     system:
-      "Generate personalized learning roadmap JSON only. Use this shape: {\"goal\":\"\",\"duration\":\"\",\"weeklyPlan\":[{\"week\":1,\"focus\":\"\",\"tasks\":[\"\"]}],\"projects\":[\"\"],\"milestones\":[\"\"]}",
+      'Generate personalized learning roadmap JSON only. Use this shape: {"goal":"","duration":"","weeklyPlan":[{"week":1,"focus":"","tasks":[""]}],"projects":[""],"milestones":[""]}',
     prompt: `Goal: ${goal}\nCurrent level: ${currentLevel}\nWeekly hours: ${weeklyHours}\nFocus areas: ${(focusAreas || []).join(", ")}`,
   });
 

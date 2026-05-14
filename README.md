@@ -44,7 +44,7 @@ SkillVault is a high-performance, full-stack Learning Management System (LMS) de
 | **Backend** | Node.js, Express.js, MongoDB (Mongoose) |
 | **State Management** | Zustand, React Query (TanStack) |
 | **Services** | Cloudinary (Media), Stripe & Razorpay (Payments), OpenAI (AI Models), Resend (Email) |
-| **DevOps** | Winston (Logging), Zod (Validation), ESLint, Prettier |
+| **Developers Tools & Libraries** | Winston (Logging), Zod (Validation), ESLint, Prettier |
 
 ---
 

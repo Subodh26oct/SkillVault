@@ -26,10 +26,10 @@ const legalLinks = [
 ];
 
 const socialLinks = [
-  { href: "https://github.com", label: "GitHub" },
-  { href: "https://linkedin.com", label: "LinkedIn" },
-  { href: "https://twitter.com", label: "Twitter" },
-  { href: "mailto:contact@skillvault.dev", label: "Email" },
+  { href: "https://github.com/Subodh26oct", label: "GitHub" },
+  { href: "https://www.linkedin.com/in/subodhln/", label: "LinkedIn" },
+  { href: "https://x.com/", label: "Twitter" },
+  { href: "mailto:subodh261003kumar@gmail.com", label: "Email" },
 ];
 
 function SocialIcon({ label }: { label: string }) {
